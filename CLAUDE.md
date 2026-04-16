@@ -1,14 +1,14 @@
-# mt2req
+# mt2data
 
-`mt2req` is a command-line tool written in Go. It takes a Markdown+TOON (MT) document produced
+`mt2data` is a command-line tool written in Go. It takes a Markdown+TOON (MT) document produced
 by `pdf2mt` and extracts a structured requirements table from it, with the aid of the Claude API.
 
 ## Context: the requirements analysis workflow
 
-`mt2req` is step (2) in a larger workflow:
+`mt2data` is step (2) in a larger workflow:
 
 1. **pdf2mt** — converts a PDF requirements document to MT format (1:1 fidelity, LLM-optimized).
-2. **mt2req** (this tool) — extracts a requirements table from the MT document.
+2. **mt2data** (this tool) — extracts a requirements table from the MT document.
 3. **Synthesis** — human-led distillation of the requirements into a canonical, non-redundant set.
 4. **Inconsistency detection** — pairwise comparison of requirements within domain clusters.
 
@@ -91,4 +91,4 @@ Implementation language: Go.
 
 - `pdf2mt` repo: https://github.com/rveen/pdf2mt (locally ../pdf2mt)
 - MT format is defined there.
-- `mt2req` does not depend on `pdf2mt` at build time; it only consumes its output format.
+- `mt2data` does not depend on `pdf2mt` at build time; it only consumes its output format.

@@ -166,7 +166,7 @@ func TestAssembleTOON_count(t *testing.T) {
 	}
 	out := assembleTOON(reqs)
 
-	if !strings.HasPrefix(out, "requirements[2]{section|item|title|domain|verb|verification}:") {
+	if !strings.HasPrefix(out, "requirements[2]{Requirement|Section|Item|Domain|Verb|Verification}:") {
 		t.Errorf("unexpected header: %q", out)
 	}
 	// ID must NOT appear in the printout.

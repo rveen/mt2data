@@ -1,16 +1,20 @@
-// Command mt2req extracts a structured requirements table from an MT document.
+// Command mt2data extracts a structured requirements table from an MT document.
 //
 // Usage:
 //
-//	mt2req [flags] input.mt
+//	mt2data [flags] input.mt
 //
 // Flags:
 //
-//	-o string      output file (required)
-//	-j             also write a JSON array alongside the TOON table
-//	-model string  Claude model (default claude-sonnet-4-6)
+//	-o string          output file (required)
+//	-j                 also write a JSON array alongside the TOON table
+//	-provider string   LLM provider: claude (default) or openai
+//	-model string      model override (default: claude-sonnet-4-6 / gpt-4o)
 //
-// Requires ANTHROPIC_API_KEY in the environment.
+// Required environment variables:
+//
+//	ANTHROPIC_API_KEY  when using -provider claude (default)
+//	OPENAI_API_KEY     when using -provider openai
 package main
 
 import (
@@ -19,20 +23,21 @@ import (
 	"fmt"
 	"os"
 
-	mt2req "github.com/rveen/mt2req"
+	mt2data "github.com/rveen/mt2data"
 )
 
 var Usage = func() {
 	fmt.Fprintf(flag.CommandLine.Output(), "MT to requirements table extractor\nUsage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
-	fmt.Fprintln(flag.CommandLine.Output(), "\n  The ANTHROPIC_API_KEY must be set in the environment.")
+	fmt.Fprintln(flag.CommandLine.Output(), "\n  Set ANTHROPIC_API_KEY (claude) or OPENAI_API_KEY (openai) in the environment.")
 }
 
 func main() {
 	var (
 		outputFile = flag.String("o", "", "output file (required)")
 		jsonOut    = flag.Bool("j", false, "also write a JSON array alongside the TOON table")
-		model      = flag.String("model", "", "Claude model (default claude-sonnet-4-6)")
+		provider   = flag.String("provider", "claude", "LLM provider: claude or openai")
+		model      = flag.String("model", "", "model override (default: claude-sonnet-4-6 / gpt-4o)")
 	)
 
 	flag.Usage = Usage
@@ -41,7 +46,7 @@ func main() {
 	if flag.NArg() != 1 {
 		fmt.Fprintf(os.Stderr, "MT to requirements table extractor\nUsage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
-		fmt.Fprintln(os.Stderr, "\n  The ANTHROPIC_API_KEY must be set in the environment.")
+		fmt.Fprintln(os.Stderr, "\n  Set ANTHROPIC_API_KEY (claude) or OPENAI_API_KEY (openai) in the environment.")
 		os.Exit(1)
 	}
 
@@ -51,15 +56,16 @@ func main() {
 	}
 
 	mtPath := flag.Arg(0)
-	opts := &mt2req.Options{
+	opts := &mt2data.Options{
+		Provider:   *provider,
 		Model:      *model,
 		OutputFile: *outputFile,
 		JSON:       *jsonOut,
 	}
 
-	_, err := mt2req.Extract(context.Background(), mtPath, opts)
+	_, err := mt2data.Extract(context.Background(), mtPath, opts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "mt2req: %v\n", err)
+		fmt.Fprintf(os.Stderr, "mt2data: %v\n", err)
 		os.Exit(1)
 	}
 }
