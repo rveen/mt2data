@@ -1,4 +1,4 @@
-// Command mt2data extracts a structured requirements table from an MT document.
+// Command mt2data extracts a structured requirements or tests table from an MT document.
 //
 // Usage:
 //
@@ -8,6 +8,7 @@
 //
 //	-o string          output file (required)
 //	-j                 also write a JSON array alongside the TOON table
+//	-mode string       extraction mode: requirements (default) or tests
 //	-provider string   LLM provider: claude (default) or openai
 //	-model string      model override (default: claude-sonnet-4-6 / gpt-4o)
 //
@@ -36,6 +37,7 @@ func main() {
 	var (
 		outputFile = flag.String("o", "", "output file (required)")
 		jsonOut    = flag.Bool("j", false, "also write a JSON array alongside the TOON table")
+		mode       = flag.String("mode", "requirements", "extraction mode: requirements or tests")
 		provider   = flag.String("provider", "claude", "LLM provider: claude or openai")
 		model      = flag.String("model", "", "model override (default: claude-sonnet-4-6 / gpt-4o)")
 	)
@@ -61,6 +63,7 @@ func main() {
 		Model:      *model,
 		OutputFile: *outputFile,
 		JSON:       *jsonOut,
+		Mode:       *mode,
 	}
 
 	_, err := mt2data.Extract(context.Background(), mtPath, opts)

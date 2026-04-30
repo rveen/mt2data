@@ -166,7 +166,7 @@ func TestAssembleTOON_count(t *testing.T) {
 	}
 	out := assembleTOON(reqs)
 
-	if !strings.HasPrefix(out, "requirements[2]{Requirement|Section|Item|Domain|Verb|Verification}:") {
+	if !strings.HasPrefix(out, "requirements[2]{Requirement|Section|Item|Domain|Verb|Verification|FunctionalSafety}:") {
 		t.Errorf("unexpected header: %q", out)
 	}
 	// ID must NOT appear in the printout.
@@ -184,7 +184,7 @@ func TestAssembleTOON_pipeEscape(t *testing.T) {
 	}
 	out := assembleTOON(reqs)
 	// The literal " | " in a field must be escaped to " / ".
-	if strings.Count(out, " | ") != 5 { // exactly the 5 column separators
+	if strings.Count(out, " | ") != 6 { // exactly the 6 column separators
 		t.Errorf("unexpected number of ' | ' separators in row: %q", out)
 	}
 	if !strings.Contains(out, "A / B") {
@@ -194,7 +194,7 @@ func TestAssembleTOON_pipeEscape(t *testing.T) {
 
 func TestAssembleTOON_empty(t *testing.T) {
 	out := assembleTOON(nil)
-	if !strings.HasPrefix(out, "requirements[0]{") {
+	if !strings.HasPrefix(out, "requirements[0]{Requirement|Section|Item|Domain|Verb|Verification|FunctionalSafety}:") {
 		t.Errorf("empty table should start with requirements[0]{, got: %q", out)
 	}
 }
@@ -213,9 +213,12 @@ func TestAssembleJSON(t *testing.T) {
 	if !strings.Contains(out, `"item": "system"`) {
 		t.Errorf("JSON output missing item field")
 	}
-	// compound must still be present in JSON even though it's not printed
+	// compound and functional_safety must still be present in JSON even though not printed
 	if !strings.Contains(out, `"compound"`) {
 		t.Error("compound field missing from JSON output")
+	}
+	if !strings.Contains(out, `"functional_safety"`) {
+		t.Error("functional_safety field missing from JSON output")
 	}
 }
 
@@ -223,5 +226,108 @@ func TestAssembleJSON_empty(t *testing.T) {
 	out := assembleJSON(nil)
 	if strings.TrimSpace(out) != "[]" {
 		t.Errorf("empty JSON should be [], got: %q", out)
+	}
+}
+
+// ----------------------------------------------------------------- test-mode: TOON assembly
+
+func TestAssembleTestTOON_count(t *testing.T) {
+	tests := []testCase{
+		{ID: "1", Section: "5.1", Title: "Apply 12 V for 5 s and verify no fault", Item: "power supply", TestType: "functional", Method: "T", Domain: "hardware"},
+		{ID: "2", Section: "5.2", Title: "Inspect wiring harness for chafing", Item: "wiring harness", TestType: "functional", Method: "I", Domain: "hardware"},
+	}
+	out := assembleTestTOON(tests)
+
+	if !strings.HasPrefix(out, "tests[2]{Test|Section|Item|Type|Method|Domain}:") {
+		t.Errorf("unexpected header: %q", out)
+	}
+	if !strings.Contains(out, "12 V") {
+		t.Error("first test title not found in output")
+	}
+	if !strings.Contains(out, "wiring harness") {
+		t.Error("second test item not found in output")
+	}
+}
+
+func TestAssembleTestTOON_empty(t *testing.T) {
+	out := assembleTestTOON(nil)
+	if !strings.HasPrefix(out, "tests[0]{") {
+		t.Errorf("empty table should start with tests[0]{, got: %q", out)
+	}
+}
+
+func TestAssembleTestTOON_pipeEscape(t *testing.T) {
+	tests := []testCase{
+		{ID: "1", Section: "6.1", Title: "Check A | B interface", Item: "interface", TestType: "interface", Method: "T", Domain: "system"},
+	}
+	out := assembleTestTOON(tests)
+	// exactly 5 column separators in the data row
+	if strings.Count(out, " | ") != 5 {
+		t.Errorf("unexpected number of ' | ' separators: %q", out)
+	}
+	if !strings.Contains(out, "A / B") {
+		t.Error("escaped ' / ' not found in TOON row")
+	}
+}
+
+// ----------------------------------------------------------------- test-mode: JSON assembly
+
+func TestAssembleTestJSON(t *testing.T) {
+	tests := []testCase{
+		{ID: "1", Section: "5.1", Title: "Apply 12 V for 5 s", Item: "power supply", TestType: "functional", Method: "T", Domain: "hardware"},
+	}
+	out := assembleTestJSON(tests)
+	if !strings.Contains(out, `"id": "1"`) {
+		t.Errorf("JSON output missing id field, got: %s", out)
+	}
+	if !strings.Contains(out, `"test_type": "functional"`) {
+		t.Errorf("JSON output missing test_type field")
+	}
+	if !strings.Contains(out, `"pass_criterion"`) {
+		t.Errorf("JSON output missing pass_criterion field")
+	}
+}
+
+func TestAssembleTestJSON_empty(t *testing.T) {
+	out := assembleTestJSON(nil)
+	if strings.TrimSpace(out) != "[]" {
+		t.Errorf("empty JSON should be [], got: %q", out)
+	}
+}
+
+// ----------------------------------------------------------------- test-mode: JSON parsing
+
+func TestParseTestCases_basic(t *testing.T) {
+	input := `[{"section":"5.1","title":"Apply 12 V for 5 s and verify no fault","item":"power supply","test_type":"functional","method":"T","preconditions":"DUT powered off","pass_criterion":"no fault flag set","domain":"hardware"}]`
+	cases := parseTestCases("5.1", input)
+	if len(cases) != 1 {
+		t.Fatalf("got %d test cases, want 1", len(cases))
+	}
+	if cases[0].TestType != "functional" {
+		t.Errorf("test_type = %q, want functional", cases[0].TestType)
+	}
+	if cases[0].Method != "T" {
+		t.Errorf("method = %q, want T", cases[0].Method)
+	}
+	if cases[0].PassCriterion != "no fault flag set" {
+		t.Errorf("pass_criterion = %q, want 'no fault flag set'", cases[0].PassCriterion)
+	}
+}
+
+func TestParseTestCases_empty(t *testing.T) {
+	cases := parseTestCases("5.1", "[]")
+	if len(cases) != 0 {
+		t.Errorf("got %d cases for empty array, want 0", len(cases))
+	}
+}
+
+func TestParseTestCases_withCodeFence(t *testing.T) {
+	input := "```json\n[{\"section\":\"5.1\",\"title\":\"Verify boot time\",\"item\":\"ECU\",\"test_type\":\"performance\",\"method\":\"T\",\"preconditions\":\"\",\"pass_criterion\":\"boot within 2 s\",\"domain\":\"system\"}]\n```"
+	cases := parseTestCases("5.1", input)
+	if len(cases) != 1 {
+		t.Fatalf("got %d cases with code fence, want 1", len(cases))
+	}
+	if cases[0].TestType != "performance" {
+		t.Errorf("test_type = %q, want performance", cases[0].TestType)
 	}
 }
